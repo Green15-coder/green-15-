@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlayStatus {
+  active
+  settled
+  voided
+  hidden
+}
+
+enum ResultStatus {
+  win
+  loss
+  push
+  pending
+  void
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String?        @unique
+  name          String?
+  image         String?
+  role          String         @default("user")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  settings      UserSettings?
+  trackerEntries TrackerEntry[]
+  savedViews    SavedView[]
+}
+
+model UserSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  defaultBook         String?
+  defaultUnits        Float?   @default(1)
+  notificationsEnabled Boolean  @default(false)
+  onboardingComplete   Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Play {
+  id         String       @id @default(cuid())
+  subject    String
+  sport      String
+  market     String
+  grade      String
+  ev         Float
+  clv        Float
+  odds       Int
+  book       String
+  rankScore  Float
+  whyRanked  String?
+  altLines   Json?
+  status     PlayStatus   @default(active)
+  result     ResultStatus @default(pending)
+  gameTime   DateTime
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  trackerEntries TrackerEntry[]
+}
+
+model TrackerEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  playId    String
+  units     Float    @default(1)
+  book      String?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  play      Play     @relation(fields: [playId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([playId])
+}
+
+model SavedView {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
